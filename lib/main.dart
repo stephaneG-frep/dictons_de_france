@@ -10,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'services/favorites_service.dart';
 import 'services/theme_service.dart';
 import 'services/notification_service.dart';
+import 'services/widget_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ void main() async {
     ThemeService().load(),
     NotificationService.initialize(),
   ]);
+  WidgetService.updateDailyDicton();
   runApp(const DictonsDeFranceApp());
 }
 

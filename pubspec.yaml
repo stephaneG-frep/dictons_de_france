@@ -20,6 +20,8 @@ dependencies:
   flutter_local_notifications: ^17.2.4
   # Gestion des fuseaux horaires pour les notifications planifiées
   timezone: ^0.9.4
+  # Widget sur l'écran d'accueil Android
+  home_widget: ^0.6.0
 
 dev_dependencies:
   flutter_test:
