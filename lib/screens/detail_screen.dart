@@ -7,7 +7,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/entry.dart';
+import '../services/favorites_service.dart';
 
 class DetailScreen extends StatelessWidget {
   // L'entrée à afficher en détail
@@ -30,6 +32,31 @@ class DetailScreen extends StatelessWidget {
           style: GoogleFonts.merriweather(fontSize: 16),
         ),
         elevation: 0,
+        actions: [
+          // Bouton favori
+          ListenableBuilder(
+            listenable: FavoritesService(),
+            builder: (context, _) {
+              final isFav = FavoritesService().isFavorite(entry.id);
+              return IconButton(
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: isFav ? Colors.redAccent : Colors.white70,
+                ),
+                onPressed: () => FavoritesService().toggle(entry.id),
+              );
+            },
+          ),
+          // Bouton partage
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
+            tooltip: 'Partager',
+            onPressed: () {
+              final text = _buildShareText();
+              SharePlus.instance.share(ShareParams(text: text));
+            },
+          ),
+        ],
       ),
 
       // ── Corps de l'écran ──
@@ -109,7 +136,7 @@ class DetailScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             const Color(0xFF1A3A5C),
-            const Color(0xFF1A3A5C).withOpacity(0.85),
+            const Color(0xFF1A3A5C).withValues(alpha:0.85),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -150,10 +177,10 @@ class DetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha:0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha:0.15),
           width: 1,
         ),
       ),
@@ -165,7 +192,7 @@ class DetailScreen extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha:0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 18, color: color),
@@ -202,6 +229,21 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
+  // ── Texte formaté pour le partage ──
+  String _buildShareText() {
+    final lines = <String>[
+      '${entry.category.emoji} ${entry.category.displayName}',
+      '',
+      '« ${entry.text} »',
+      '',
+      entry.meaning,
+    ];
+    if (entry.author != null) lines.addAll(['', '— ${entry.author}']);
+    if (entry.origin != null) lines.addAll(['', entry.origin!]);
+    lines.addAll(['', '📖 Via Dictons de France']);
+    return lines.join('\n');
+  }
+
   // ── Widget : liste de tags ──
   Widget _buildTags(Color categoryColor) {
     return Column(
@@ -225,10 +267,10 @@ class DetailScreen extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: categoryColor.withOpacity(0.1),
+                color: categoryColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: categoryColor.withOpacity(0.3),
+                  color: categoryColor.withValues(alpha:0.3),
                   width: 1,
                 ),
               ),

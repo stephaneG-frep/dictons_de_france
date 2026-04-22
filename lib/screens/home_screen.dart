@@ -1,8 +1,5 @@
 // ============================================================
 // Fichier : lib/screens/home_screen.dart
-// Rôle    : Écran principal avec bannière "Entrée du jour",
-//           4 onglets (Dictons / Citations / Expressions / Favoris)
-//           et la barre de recherche.
 // ============================================================
 
 import 'dart:math';
@@ -12,10 +9,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../data/entries_data.dart';
 import '../models/entry.dart';
 import '../services/favorites_service.dart';
+import '../services/notification_service.dart';
+import '../services/theme_service.dart';
 import '../widgets/daily_entry_banner.dart';
 import '../widgets/entry_card.dart';
 import '../widgets/search_bar.dart';
 import 'detail_screen.dart';
+import 'quiz_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,9 +26,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  // 4 onglets maintenant (+ Favoris)
   late TabController _tabController;
   String _searchQuery = '';
+  // Filtre région actif (null = toutes)
+  String? _selectedRegion;
 
   @override
   void initState() {
@@ -43,8 +44,27 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  // Toutes les régions distinctes des dictons
+  List<String> get _availableRegions {
+    final regions = allEntries
+        .where((e) => e.category == Category.dicton && e.region != null)
+        .map((e) => e.region!)
+        .toSet()
+        .toList()
+      ..sort();
+    return regions;
+  }
+
   List<Entry> _getFilteredEntries(Category category) {
     var filtered = allEntries.where((e) => e.category == category).toList();
+
+    // Filtre région (uniquement pour les dictons)
+    if (category == Category.dicton && _selectedRegion != null) {
+      filtered = filtered
+          .where((e) => e.region == _selectedRegion)
+          .toList();
+    }
+
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((e) {
@@ -58,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen>
     return filtered;
   }
 
-  // Retourne les entrées favorites (filtrées par recherche si besoin)
   List<Entry> _getFavoriteEntries() {
     final favIds = FavoritesService().favoriteIds;
     var favorites = allEntries.where((e) => favIds.contains(e.id)).toList();
@@ -82,14 +101,51 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _openRandomEntry() {
     if (allEntries.isEmpty) return;
-    final randomEntry = allEntries[Random().nextInt(allEntries.length)];
-    _openDetail(randomEntry);
+    _openDetail(allEntries[Random().nextInt(allEntries.length)]);
+  }
+
+  void _openQuiz() {
+    // Passe la catégorie de l'onglet actif au quiz (sauf Favoris)
+    Category? cat;
+    switch (_tabController.index) {
+      case 0: cat = Category.dicton; break;
+      case 1: cat = Category.citation; break;
+      case 2: cat = Category.expression; break;
+      case 3: cat = Category.proverbe; break;
+      default: cat = null;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => QuizScreen(initialCategory: cat)),
+    );
+  }
+
+  // Active/désactive les notifications et informe l'utilisateur
+  void _toggleNotifications() async {
+    final granted = await NotificationService.requestPermission();
+    if (!mounted) return;
+    if (granted) {
+      await NotificationService.scheduleDailyNotification(hour: 8);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Notification quotidienne activée à 8h00'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permission refusée — vérifiez les paramètres de l\'appli'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A3A5C),
         foregroundColor: Colors.white,
@@ -103,13 +159,54 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         actions: [
+          // Bouton Quiz
+          IconButton(
+            icon: const Icon(Icons.quiz_outlined),
+            tooltip: 'Quiz',
+            color: const Color(0xFFD4AF37),
+            onPressed: _openQuiz,
+          ),
+          // Bouton entrée aléatoire
           IconButton(
             icon: const Icon(Icons.shuffle_rounded),
             tooltip: 'Entrée aléatoire',
-            onPressed: _openRandomEntry,
             color: const Color(0xFFD4AF37),
+            onPressed: _openRandomEntry,
           ),
-          const SizedBox(width: 4),
+          // Menu (notifications + thème)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'notif') _toggleNotifications();
+              if (value == 'theme') ThemeService().toggle();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'notif',
+                child: Row(children: [
+                  Icon(Icons.notifications_outlined, size: 20),
+                  SizedBox(width: 10),
+                  Text('Notification quotidienne'),
+                ]),
+              ),
+              PopupMenuItem(
+                value: 'theme',
+                child: ListenableBuilder(
+                  listenable: ThemeService(),
+                  builder: (_, __) => Row(children: [
+                    Icon(ThemeService().isDark
+                        ? Icons.light_mode_outlined
+                        : Icons.dark_mode_outlined,
+                        size: 20),
+                    const SizedBox(width: 10),
+                    Text(ThemeService().isDark
+                        ? 'Mode clair'
+                        : 'Mode sombre'),
+                  ]),
+                ),
+              ),
+            ],
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -117,10 +214,9 @@ class _HomeScreenState extends State<HomeScreen>
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
           tabs: const [
             Tab(text: '🌾  Dictons'),
             Tab(text: '📜  Citations'),
@@ -133,17 +229,20 @@ class _HomeScreenState extends State<HomeScreen>
 
       body: Column(
         children: [
-          // ── Bannière "Entrée du jour" (visible sur tous les onglets sauf Favoris) ──
+          // Bannière du jour (tous onglets sauf Favoris)
           if (_tabController.index < 4)
             DailyEntryBanner(onTap: _openDetail),
 
-          // ── Barre de recherche ──
+          // Filtres région (uniquement onglet Dictons)
+          if (_tabController.index == 0)
+            _buildRegionFilters(),
+
+          // Barre de recherche
           AppSearchBar(
             hintText: 'Rechercher un mot-clé...',
             onChanged: (value) => setState(() => _searchQuery = value),
           ),
 
-          // ── Contenu des onglets ──
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -152,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen>
                 _buildTabContent(Category.citation),
                 _buildTabContent(Category.expression),
                 _buildTabContent(Category.proverbe),
-                // Onglet Favoris : se reconstruit quand FavoritesService notifie
                 ListenableBuilder(
                   listenable: FavoritesService(),
                   builder: (context, _) => _buildFavoritesTab(),
@@ -160,6 +258,43 @@ class _HomeScreenState extends State<HomeScreen>
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // Chips de filtre par région (onglet Dictons)
+  Widget _buildRegionFilters() {
+    final regions = _availableRegions;
+    if (regions.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          // Chip "Toutes"
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: FilterChip(
+              label: const Text('Toutes'),
+              selected: _selectedRegion == null,
+              onSelected: (_) => setState(() => _selectedRegion = null),
+              selectedColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+              checkmarkColor: const Color(0xFF2E7D32),
+            ),
+          ),
+          ...regions.map((region) => Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: FilterChip(
+              label: Text(region),
+              selected: _selectedRegion == region,
+              onSelected: (_) => setState(() =>
+                  _selectedRegion = _selectedRegion == region ? null : region),
+              selectedColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+              checkmarkColor: const Color(0xFF2E7D32),
+            ),
+          )),
         ],
       ),
     );
@@ -196,18 +331,15 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            isFavorites ? '❤️' : '🔍',
-            style: const TextStyle(fontSize: 48),
-          ),
+          Text(isFavorites ? '❤️' : '🔍',
+              style: const TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
           Text(
             isFavorites ? 'Aucun favori pour l\'instant' : 'Aucun résultat',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-            ),
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
