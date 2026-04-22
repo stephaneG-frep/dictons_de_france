@@ -35,22 +35,22 @@ class DictonsDeFranceApp extends StatelessWidget {
           title: 'Dictons de France',
           debugShowCheckedModeBanner: false,
           themeMode: ThemeService().mode,
-          theme: _buildLightTheme(context),
-          darkTheme: _buildDarkTheme(context),
+          theme: _buildLightTheme(),
+          darkTheme: _buildDarkTheme(),
           home: const HomeScreen(),
         );
       },
     );
   }
 
-  ThemeData _buildLightTheme(BuildContext context) {
+  ThemeData _buildLightTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF1A3A5C),
         brightness: Brightness.light,
       ),
-      textTheme: GoogleFonts.latoTextTheme(Theme.of(context).textTheme),
+      textTheme: GoogleFonts.latoTextTheme(ThemeData(brightness: Brightness.light).textTheme),
       appBarTheme: AppBarTheme(
         backgroundColor: const Color(0xFF1A3A5C),
         foregroundColor: Colors.white,
@@ -69,7 +69,7 @@ class DictonsDeFranceApp extends StatelessWidget {
     );
   }
 
-  ThemeData _buildDarkTheme(BuildContext context) {
+  ThemeData _buildDarkTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(

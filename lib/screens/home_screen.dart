@@ -126,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (!mounted) return;
     if (granted) {
       await NotificationService.scheduleDailyNotification(hour: 8);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Notification quotidienne activée à 8h00'),

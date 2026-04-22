@@ -51,10 +51,7 @@ class DetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
             tooltip: 'Partager',
-            onPressed: () {
-              final text = _buildShareText();
-              SharePlus.instance.share(ShareParams(text: text));
-            },
+            onPressed: () => Share.share(_buildShareText()),
           ),
         ],
       ),
