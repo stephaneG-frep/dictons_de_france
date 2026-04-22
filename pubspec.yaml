@@ -1,0 +1,30 @@
+name: dictons_de_france
+description: Une encyclopédie des dictons, citations et expressions françaises.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Police de caractères Google pour un style plus élégant
+  google_fonts: ^6.1.0
+  # Stockage persistant clé/valeur sur le téléphone (pour les favoris)
+  shared_preferences: ^2.2.0
+  # Partage de texte vers d'autres applications
+  share_plus: ^7.2.1
+  # Notifications locales (entrée du jour)
+  flutter_local_notifications: ^17.2.4
+  # Gestion des fuseaux horaires pour les notifications planifiées
+  timezone: ^0.9.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
