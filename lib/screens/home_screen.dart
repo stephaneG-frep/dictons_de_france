@@ -8,12 +8,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../data/entries_data.dart';
 import '../models/entry.dart';
+import '../services/custom_entries_service.dart';
 import '../services/favorites_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/daily_entry_banner.dart';
 import '../widgets/entry_card.dart';
 import '../widgets/search_bar.dart';
+import 'create_entry_screen.dart';
 import 'detail_screen.dart';
 import 'quiz_screen.dart';
 
@@ -34,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -147,6 +149,16 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: _tabController.index == 5
+          ? FloatingActionButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CreateEntryScreen()),
+              ),
+              tooltip: 'Nouvelle création',
+              child: const Icon(Icons.add),
+            )
+          : null,
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A3A5C),
         foregroundColor: Colors.white,
@@ -224,13 +236,14 @@ class _HomeScreenState extends State<HomeScreen>
             Tab(text: '💬  Expressions'),
             Tab(text: '📖  Proverbes'),
             Tab(text: '❤️  Favoris'),
+            Tab(text: '✏️  Mes créations'),
           ],
         ),
       ),
 
       body: Column(
         children: [
-          // Bannière du jour (tous onglets sauf Favoris)
+          // Bannière du jour (uniquement onglets officiels)
           if (_tabController.index < 4)
             DailyEntryBanner(onTap: _openDetail),
 
@@ -255,6 +268,10 @@ class _HomeScreenState extends State<HomeScreen>
                 ListenableBuilder(
                   listenable: FavoritesService(),
                   builder: (context, _) => _buildFavoritesTab(),
+                ),
+                ListenableBuilder(
+                  listenable: CustomEntriesService(),
+                  builder: (context, _) => _buildCustomTab(),
                 ),
               ],
             ),
@@ -324,6 +341,57 @@ class _HomeScreenState extends State<HomeScreen>
         entry: entries[index],
         onTap: () => _openDetail(entries[index]),
       ),
+    );
+  }
+
+  Widget _buildCustomTab() {
+    final entries = CustomEntriesService().entries;
+    if (entries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('✏️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 16),
+            Text(
+              'Aucune création pour l\'instant',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Appuyez sur + pour ajouter votre premier dicton',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80, top: 4),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        return Dismissible(
+          key: ValueKey(entry.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            color: Colors.red.shade400,
+            child: const Icon(Icons.delete_outline, color: Colors.white),
+          ),
+          onDismissed: (_) => CustomEntriesService().delete(entry.id),
+          child: EntryCard(
+            entry: entry,
+            onTap: () => _openDetail(entry),
+          ),
+        );
+      },
     );
   }
 

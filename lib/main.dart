@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
+import 'services/custom_entries_service.dart';
 import 'services/favorites_service.dart';
 import 'services/theme_service.dart';
 import 'services/notification_service.dart';
@@ -17,6 +18,7 @@ void main() async {
   // Chargement en parallèle des services persistants
   await Future.wait([
     FavoritesService().load(),
+    CustomEntriesService().load(),
     ThemeService().load(),
     NotificationService.initialize(),
   ]);
